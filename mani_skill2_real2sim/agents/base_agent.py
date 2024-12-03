@@ -152,7 +152,9 @@ class BaseAgent:
             return self.controller.action_space
 
     def reset(self, init_qpos=None):
+        print("Resetting agent", init_qpos)
         if init_qpos is not None:
+            init_qpos = init_qpos[: self.robot.dof]
             self.robot.set_qpos(init_qpos)
         self.robot.set_qvel(np.zeros(self.robot.dof))
         self.robot.set_qacc(np.zeros(self.robot.dof))
