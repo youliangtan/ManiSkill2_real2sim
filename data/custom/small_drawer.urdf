@@ -234,7 +234,8 @@
     <color rgba="0.38824 0.32157 0.27451 .40000"/>
   </material>
   <material name="red_wooden">
-    <color rgba="0.80000 0.00000 0.00000 1.00000"/>
+    <!-- #821F24 -->
+    <color rgba="0.80000 0.12160 0.14120 1.00000"/>
   </material>
   <material name="stone">
     <color rgba="0.63529 0.52941 0.41176 1.00000"/>
@@ -243,6 +244,6 @@
     <color rgba="0.70000 0.70000 0.60000 1.00000"/>
   </material>
   <material name="black">
-    <color rgba="0.10000 0.10000 0.10000 1.00000"/>
+    <color rgba="0.05000 0.050000 0.05000 1.00000"/>
   </material>
 </robot>

@@ -33,6 +33,9 @@ imgui.ini
 # but can be excluded explicitly
 tmp/
 /data/*
+#  include /data/real_inpainting/*
+!data/real_inpainting/
+
 demos/
 videos/
 

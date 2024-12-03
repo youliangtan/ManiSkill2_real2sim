@@ -11,10 +11,15 @@ from transforms3d.euler import euler2quat
 
 from .base_env import CustomOtherObjectsInSceneEnv, CustomSceneEnv
 
+print_green = lambda x: print("\033[92m {}\033[00m".format(x))
+
 
 BACKGROUND_IMAGE_PATH = "real_inpainting/bridge_small_drawer.png"
-DRAWER_JOINT_DISTANCE = 0.01 # TODO: tune this value 0 - 0.12, limit defined in urdf
 
+# NOTE: tune this value 0 - 0.12, limit defined in urdf
+CLOSE_DRAWER_JOINT_DIST = 0.02
+OPEN_DRAWER_JOINT_DIST = 0.12
+TARGET_DRAWER_TOLERANCE = 0.02
 
 class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
     def __init__(
@@ -60,11 +65,6 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
         print("\n\nret", ret)
 
         return ret
-
-    # def _get_default_scene_config(self):
-    #     scene_config = super()._get_default_scene_config()
-    #     scene_config.enable_pcm = True
-    #     return scene_config
 
     def _initialize_agent(self):
         # init_qpos = np.array(
@@ -133,11 +133,11 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
         # self.art_obj.set_pose(sapien.Pose([-0.295, 0, 0.017], [1, 0, 0, 0]))
         # NOTE  (YL): the cabinet is placed at the center of the table
         # convert rpy to quaternion
-        rpy = [0, 0, 1.3]
+        rpy = [0, 0, 1.35]
         quat = euler2quat(*rpy)
         print("quat", quat)
         # NOTE: x -> -ve front of the robot, y -> left of the robot, z -> up
-        self.art_obj.set_pose(sapien.Pose([-0.25, -0.15, 0.85], quat))
+        self.art_obj.set_pose(sapien.Pose([-0.26, -0.17, 0.85], quat))
         for joint in self.art_obj.get_active_joints():
             # friction seems more important
             # joint.set_friction(0.1)
@@ -150,7 +150,7 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
         self.joint_names = [j.name for j in self.art_obj.get_active_joints()]
         self.joint_idx = self.joint_names.index(f"small_drawer_joint")
 
-    def reset(self, seed=None, options=None, drawer_joint_distance=DRAWER_JOINT_DISTANCE):
+    def reset(self, seed=None, options=None, drawer_joint_distance=CLOSE_DRAWER_JOINT_DIST):
         if options is None:
             options = dict()
         options = options.copy()
@@ -198,6 +198,7 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
         return obs, info
 
     def _additional_prepackaged_config_reset(self, options):
+        """NOTE: this is not used for now"""
         # use prepackaged evaluation configs under visual matching setup
         overlay_ids = ["a0", "a1", "a2", "b0", "b1", "b2", "c0", "c1", "c2"]
         rgb_overlay_paths = [
@@ -254,18 +255,22 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
     def evaluate(self, **kwargs):
         qpos = self.art_obj.get_qpos()[self.joint_idx]
         self.episode_stats["qpos"] = "{:.3f}".format(qpos)
-        return dict(success=qpos >= 0.15, qpos=qpos, episode_stats=self.episode_stats)
+        return dict(
+            success=qpos >= OPEN_DRAWER_JOINT_DIST - TARGET_DRAWER_TOLERANCE,
+            qpos=qpos,
+            episode_stats=self.episode_stats
+        )
 
     def get_language_instruction(self, **kwargs):
         return "open the red drawer"
 
 
-@register_env("OpenSmallDrawerCustomInScene-v0", max_episode_steps=113)
+@register_env("OpenSmallDrawerCustomInScene-v0", max_episode_steps=120)
 class OpenSmallDrawerCustomInSceneEnv(OpenSmallDrawerInSceneEnv, CustomOtherObjectsInSceneEnv):
     pass
 
 
-@register_env("CloseSmallDrawerCustomInScene-v0", max_episode_steps=113)
+@register_env("CloseSmallDrawerCustomInScene-v0", max_episode_steps=120)
 class CloseSmallDrawerInSceneEnv(OpenSmallDrawerInSceneEnv, CustomOtherObjectsInSceneEnv):
     def reset(self, seed=None, options=None):
         if options is None:
@@ -273,13 +278,19 @@ class CloseSmallDrawerInSceneEnv(OpenSmallDrawerInSceneEnv, CustomOtherObjectsIn
         if "obj_init_options" not in options:
             options["obj_init_options"] = dict()
         if "cabinet_init_qpos" not in options["obj_init_options"]:
-            options["obj_init_options"]["cabinet_init_qpos"] = 0.2
+            options["obj_init_options"]["cabinet_init_qpos"] = OPEN_DRAWER_JOINT_DIST
         return super().reset(seed=seed, options=options, drawer_joint_distance=0.3)
 
     def evaluate(self, **kwargs):
         qpos = self.art_obj.get_qpos()[self.joint_idx]
         self.episode_stats["qpos"] = "{:.3f}".format(qpos)
-        return dict(success=qpos <= 0.05, qpos=qpos, episode_stats=self.episode_stats)
+        eval = dict(
+            success=qpos <= CLOSE_DRAWER_JOINT_DIST + TARGET_DRAWER_TOLERANCE,
+            qpos=qpos,
+            episode_stats=self.episode_stats
+        )
+        # print("eval: ", eval)
+        return eval
 
     def get_language_instruction(self):
         return f"close the red drawer"
