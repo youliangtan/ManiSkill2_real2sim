@@ -13,13 +13,22 @@ from .base_env import CustomOtherObjectsInSceneEnv, CustomSceneEnv
 
 print_green = lambda x: print("\033[92m {}\033[00m".format(x))
 
+####################################################################################
 
 BACKGROUND_IMAGE_PATH = "real_inpainting/bridge_small_drawer.png"
 
+# Joint Configs of the drawer
 # NOTE: tune this value 0 - 0.12, limit defined in urdf
 CLOSE_DRAWER_JOINT_DIST = 0.02
 OPEN_DRAWER_JOINT_DIST = 0.12
 TARGET_DRAWER_TOLERANCE = 0.02
+
+# Location of the drawer
+# NOTE: x -> -ve front of the robot, y -> left of the robot, z -> up
+DRAWER_XYZ = [-0.26, -0.17, 0.85]
+DRAWER_RPY = [0, 0, 1.35]
+
+####################################################################################
 
 class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
     def __init__(
@@ -66,27 +75,55 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
 
         return ret
 
+    ####################################################################################
+    # We Randomize the initial pose of the robot, drawer, and background in the scene
+
     def _initialize_agent(self):
-        # init_qpos = np.array(
-        #     [
-        #         -0.2639457174606611,
-        #         0.0831913360274175,
-        #         0.5017611504652179,
-        #         1.156859026208673,
-        #         0.028583671314766423,
-        #         1.592598203487462,
-        #         -1.080652960128774,
-        #         0,
-        #         0,
-        #         -0.00285961,
-        #         0.7851361,
-        #     ]
-        # )
-        # if self.camera_mode == "variant":
-        #     init_qpos[-2] += -0.025
-        #     init_qpos[-1] += 0.008
-        # self.robot_init_options.setdefault("qpos", init_qpos)
+        # NOTE: init qpos for widowx defined in base_env.py
+        init_qpos = np.array([-0.01840777,  0.0398835,   0.22242722,  -0.00460194,  1.36524296,  0.00153398, 0.037, 0.037])
+        # add random offset to the initial qpos xyz
+        init_qpos[:3] += np.random.uniform(-0.05, 0.05, size=3)
+        # random open or close gripper
+        init_qpos[-1] = np.random.choice([0.0, 1.0])
+
+        self.robot_init_options.setdefault("qpos", init_qpos)
         super()._initialize_agent()
+
+    def _initialize_articulations(self):
+        # NOTE: Randomize the cabinet pose
+        _xyz = DRAWER_XYZ.copy() + np.random.uniform(-0.01, 0.01, size=3)
+        _rpy = DRAWER_RPY.copy() + np.random.uniform(-0.01, 0.01, size=3)
+        self.art_obj.set_pose(sapien.Pose(_xyz, euler2quat(*_rpy)))
+        return super()._initialize_articulations()
+
+    def _additional_prepackaged_config_reset(self, options):
+        background_path = str(ASSET_DIR / BACKGROUND_IMAGE_PATH)
+        self.rgb_overlay_img = (
+            cv2.cvtColor(cv2.imread(background_path), cv2.COLOR_BGR2RGB)
+            / 255
+        )
+        # NOTE: we randomize the brightness of the overlay image
+        self.rgb_overlay_img = np.clip(
+            self.rgb_overlay_img + np.random.uniform(-0.1, 0.1), 0, 1
+        )
+
+        # NOTE: not used for now
+        new_urdf_version = self._episode_rng.choice(
+            [
+                "",
+                # "recolor_tabletop_visual_matching_1",
+                # "recolor_tabletop_visual_matching_2",
+                # "recolor_cabinet_visual_matching_1",
+            ]
+        )
+        if new_urdf_version != self.urdf_version:
+            print_green(f"Switching to URDF version: {new_urdf_version}")
+            self.urdf_version = new_urdf_version
+            self._configure_agent()
+            return True
+        return False
+
+    ####################################################################################
 
     def _setup_lighting(self):
         if self.light_mode != "simple":
@@ -130,14 +167,9 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
         self.art_obj = loader.load(filename)
         self.art_obj.name = 'cabinet'
         # TODO: This pose can be tuned for different rendering approachs.
-        # self.art_obj.set_pose(sapien.Pose([-0.295, 0, 0.017], [1, 0, 0, 0]))
-        # NOTE  (YL): the cabinet is placed at the center of the table
         # convert rpy to quaternion
-        rpy = [0, 0, 1.35]
-        quat = euler2quat(*rpy)
-        print("quat", quat)
-        # NOTE: x -> -ve front of the robot, y -> left of the robot, z -> up
-        self.art_obj.set_pose(sapien.Pose([-0.26, -0.17, 0.85], quat))
+        quat = euler2quat(*DRAWER_RPY)
+        self.art_obj.set_pose(sapien.Pose(DRAWER_XYZ, quat))
         for joint in self.art_obj.get_active_joints():
             # friction seems more important
             # joint.set_friction(0.1)
@@ -172,17 +204,6 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
         # setup cabinet qpos
         self.art_obj.set_qpos([drawer_joint_distance] * self.art_obj.dof) # ensure that the drawer is closed
 
-        # obj_init_options = options.get("obj_init_options", {})
-        # obj_init_options = obj_init_options.copy()
-        # cabinet_init_qpos = obj_init_options.get("cabinet_init_qpos", None)
-        # if cabinet_init_qpos is not None:
-        #     if isinstance(cabinet_init_qpos, float):
-        #         # set qpos for target cabinet joint
-        #         tmp = [0.0] * self.art_obj.dof
-        #         tmp[self.joint_idx] = cabinet_init_qpos
-        #         cabinet_init_qpos = tmp
-        #     self.art_obj.set_qpos(cabinet_init_qpos)
-        # else:
         obs = self.get_obs()
 
         info.update(
@@ -197,57 +218,6 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
         )
         return obs, info
 
-    def _additional_prepackaged_config_reset(self, options):
-        """NOTE: this is not used for now"""
-        # use prepackaged evaluation configs under visual matching setup
-        overlay_ids = ["a0", "a1", "a2", "b0", "b1", "b2", "c0", "c1", "c2"]
-        rgb_overlay_paths = [
-            str(ASSET_DIR / BACKGROUND_IMAGE_PATH) for i in overlay_ids
-        ]
-        # robot_init_xs = [0.644, 0.765, 0.889, 0.652, 0.752, 0.851, 0.665, 0.765, 0.865]
-        # robot_init_ys = [
-        #     -0.179,
-        #     -0.182,
-        #     -0.203,
-        #     0.009,
-        #     0.009,
-        #     0.035,
-        #     0.224,
-        #     0.222,
-        #     0.222,
-        # ]
-        # robot_init_rotzs = [-0.03, -0.02, -0.06, 0, 0, 0, 0, -0.025, -0.025]
-        idx_chosen = self._episode_rng.choice(len(overlay_ids))
-
-        # options["robot_init_options"] = {
-        #     "init_xy": [robot_init_xs[idx_chosen], robot_init_ys[idx_chosen]],
-        #     "init_rot_quat": (
-        #         sapien.Pose(q=euler2quat(0, 0, robot_init_rotzs[idx_chosen]))
-        #         * sapien.Pose(q=[0, 0, 0, 1])
-        #     ).q,
-        # }
-        # TODO: tune this, this assume to be sink setup
-        options["robot_init_options"] = {
-            "init_xy": [0.147, 0.028],
-            "init_rot_quat": [0, 0, 0, 1],
-        }
-        self.rgb_overlay_img = (
-            cv2.cvtColor(cv2.imread(rgb_overlay_paths[idx_chosen]), cv2.COLOR_BGR2RGB)
-            / 255
-        )
-        new_urdf_version = self._episode_rng.choice(
-            [
-                "",
-                # "recolor_tabletop_visual_matching_1",
-                # "recolor_tabletop_visual_matching_2",
-                # "recolor_cabinet_visual_matching_1",
-            ]
-        )
-        if new_urdf_version != self.urdf_version:
-            self.urdf_version = new_urdf_version
-            self._configure_agent()
-            return True
-        return False
 
     def _initialize_episode_stats(self):
         self.episode_stats = OrderedDict(qpos=0.0)
@@ -279,7 +249,7 @@ class CloseSmallDrawerInSceneEnv(OpenSmallDrawerInSceneEnv, CustomOtherObjectsIn
             options["obj_init_options"] = dict()
         if "cabinet_init_qpos" not in options["obj_init_options"]:
             options["obj_init_options"]["cabinet_init_qpos"] = OPEN_DRAWER_JOINT_DIST
-        return super().reset(seed=seed, options=options, drawer_joint_distance=0.3)
+        return super().reset(seed=seed, options=options, drawer_joint_distance=OPEN_DRAWER_JOINT_DIST)
 
     def evaluate(self, **kwargs):
         qpos = self.art_obj.get_qpos()[self.joint_idx]
