@@ -496,15 +496,16 @@ class PutEggplantInSinkScene(PutOnBridgeInSceneEnv):
         **kwargs,
     ):
         source_obj_name = "eggplant"
-        target_obj_name = "dummy_sink_target_plane"  # invisible
+        # target_obj_name = "sink"  # visible
+        target_obj_name = "dummy_sink_target_plane"  # invisible # TODO: change the size of this object
 
-        target_xy = np.array([-0.125, 0.025])
-        xy_center = [-0.105, 0.206]
+        target_xy = np.array([-0.125, 0.225])
+        xy_center = [-0.125, 0.0]
 
         half_span_x = 0.0001
         half_span_y = 0.00015
-        num_x = 2
-        num_y = 4
+        num_x = 1
+        num_y = 2
 
         grid_pos = []
         for x in np.linspace(-half_span_x, half_span_x, num_x):
