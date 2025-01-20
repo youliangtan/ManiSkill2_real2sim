@@ -232,7 +232,7 @@ class OpenSmallDrawerInSceneEnv(CustomSceneEnv):
         )
 
     def get_language_instruction(self, **kwargs):
-        return "open the red drawer"
+        return "open the drawer"
 
 
 @register_env("OpenSmallDrawerCustomInScene-v0", max_episode_steps=120)
@@ -263,4 +263,4 @@ class CloseSmallDrawerInSceneEnv(OpenSmallDrawerInSceneEnv, CustomOtherObjectsIn
         return eval
 
     def get_language_instruction(self):
-        return f"close the red drawer"
+        return f"close the drawer"
