@@ -421,7 +421,8 @@ class PutEggplantInBasketScene(PutOnBridgeInSceneEnv):
         )
 
     def get_language_instruction(self, **kwargs):
-        return "put eggplant into yellow basket"
+        # return "put eggplant into yellow basket"
+        return "put the eggplant in the yellow basket" # NOTE(YL): minor wording change to match the instruction in realworld eval
 
     def _load_model(self):
         super()._load_model()
@@ -497,15 +498,19 @@ class PutEggplantInSinkScene(PutOnBridgeInSceneEnv):
     ):
         source_obj_name = "eggplant"
         # target_obj_name = "sink"  # visible
-        target_obj_name = "dummy_sink_target_plane"  # invisible # TODO: change the size of this object
+        target_obj_name = "dummy_sink_target_plane_large"  # invisible
 
-        target_xy = np.array([-0.125, 0.225])
-        xy_center = [-0.125, 0.0]
+        # Original for PutEggplantInBasketScene
+        # target_xy = np.array([-0.125, 0.025])
+        # xy_center = [-0.105, 0.206]
+
+        target_xy = np.array([-0.125, 0.21])
+        xy_center = [-0.138, -0.02]
 
         half_span_x = 0.0001
         half_span_y = 0.00015
         num_x = 1
-        num_y = 2
+        num_y = 1
 
         grid_pos = []
         for x in np.linspace(-half_span_x, half_span_x, num_x):
@@ -513,7 +518,6 @@ class PutEggplantInSinkScene(PutOnBridgeInSceneEnv):
                 grid_pos.append(np.array([x + xy_center[0], y + xy_center[1]]))
 
         xy_configs = [np.stack([pos, target_xy], axis=0) for pos in grid_pos]
-        print(xy_configs)
 
         quat_configs = [
             np.array([
@@ -535,12 +539,12 @@ class PutEggplantInSinkScene(PutOnBridgeInSceneEnv):
             target_obj_name=target_obj_name,
             xy_configs=xy_configs,
             quat_configs=quat_configs,
-            rgb_always_overlay_objects=['sink', 'dummy_sink_target_plane'],
+            rgb_always_overlay_objects=['sink', 'dummy_sink_target_plane_large'],
             **kwargs,
         )
 
     def get_language_instruction(self, **kwargs):
-        return "put the eggplant in the sink"
+        return "put the eggplant in the blue sink"
 
     def _load_model(self):
         super()._load_model()
