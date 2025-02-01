@@ -372,6 +372,9 @@ class StackGreenCubeOnYellowCubeBakedTexInScene(StackGreenCubeOnYellowCubeInScen
         )
 
 
+# NOTE(YL): in the new sink scene, the sink is rotated by -0.15 radian around x-axis
+SINK_SCENE_ANGLE_OFFSET = -0.15 # original scene in simpler env is 0.0
+
 @register_env("PutEggplantInBasketScene-v0", max_episode_steps=120)
 class PutEggplantInBasketScene(PutOnBridgeInSceneEnv):
     def __init__(
@@ -381,7 +384,11 @@ class PutEggplantInBasketScene(PutOnBridgeInSceneEnv):
         source_obj_name = "eggplant"
         target_obj_name = "dummy_sink_target_plane"  # invisible
 
-        target_xy = np.array([-0.125, 0.025])
+        # When SINK_SCENE_ANGLE_OFFSET = 0
+        # target_xy = np.array([-0.125, 0.025])
+
+        # When SINK_SCENE_ANGLE_OFFSET = -0.15
+        target_xy = np.array([-0.175, 0.045])
         xy_center = [-0.105, 0.206]
 
         half_span_x = 0.01
@@ -398,16 +405,16 @@ class PutEggplantInBasketScene(PutOnBridgeInSceneEnv):
 
         quat_configs = [
             np.array([
-                euler2quat(0, 0, 0, 'sxyz'),
-                [1, 0, 0, 0]
+                euler2quat(0, 0, -0.15, 'sxyz'),
+                [1, 0, 0, SINK_SCENE_ANGLE_OFFSET]
             ]),
             np.array([
                 euler2quat(0, 0, 1 * np.pi / 4, 'sxyz'),
-                [1, 0, 0, 0]
+                [1, 0, 0, SINK_SCENE_ANGLE_OFFSET]
             ]),
             np.array([
                 euler2quat(0, 0, -1 * np.pi / 4, 'sxyz'),
-                [1, 0, 0, 0]
+                [1, 0, 0, SINK_SCENE_ANGLE_OFFSET]
             ]),
         ]
 
@@ -417,6 +424,7 @@ class PutEggplantInBasketScene(PutOnBridgeInSceneEnv):
             xy_configs=xy_configs,
             quat_configs=quat_configs,
             rgb_always_overlay_objects=['sink', 'dummy_sink_target_plane'],
+            # rgb_always_overlay_objects=[],
             **kwargs,
         )
 
@@ -443,8 +451,8 @@ class PutEggplantInBasketScene(PutOnBridgeInSceneEnv):
         self.agent.robot.set_pose(sapien.Pose([-10, 0, 0]))
 
         self.sink.set_pose(sapien.Pose(
-            [-0.16, 0.13, 0.88],
-            [1, 0, 0, 0]
+            [-0.16, 0.15, 0.88],
+            [1, 0, 0, SINK_SCENE_ANGLE_OFFSET]
         ))
         self.sink.lock_motion()
 
@@ -504,8 +512,12 @@ class PutEggplantInSinkScene(PutOnBridgeInSceneEnv):
         # target_xy = np.array([-0.125, 0.025])
         # xy_center = [-0.105, 0.206]
 
-        target_xy = np.array([-0.125, 0.21])
-        xy_center = [-0.138, -0.02]
+        # When SINK_SCENE_ANGLE_OFFSET = 0
+        # target_xy = np.array([-0.125, 0.21])
+        # xy_center = [-0.138, -0.02]
+
+        target_xy = np.array([-0.105, 0.205])
+        xy_center = [-0.139, -0.015]
 
         half_span_x = 0.0001
         half_span_y = 0.00015
@@ -522,15 +534,15 @@ class PutEggplantInSinkScene(PutOnBridgeInSceneEnv):
         quat_configs = [
             np.array([
                 euler2quat(0, 0, 0, 'sxyz'),
-                [1, 0, 0, 0]
+                [1, 0, 0, SINK_SCENE_ANGLE_OFFSET]
             ]),
             np.array([
                 euler2quat(0, 0, 1 * np.pi / 4, 'sxyz'),
-                [1, 0, 0, 0]
+                [1, 0, 0, SINK_SCENE_ANGLE_OFFSET]
             ]),
             np.array([
                 euler2quat(0, 0, -1 * np.pi / 4, 'sxyz'),
-                [1, 0, 0, 0]
+                [1, 0, 0, SINK_SCENE_ANGLE_OFFSET]
             ]),
         ]
 
@@ -540,6 +552,7 @@ class PutEggplantInSinkScene(PutOnBridgeInSceneEnv):
             xy_configs=xy_configs,
             quat_configs=quat_configs,
             rgb_always_overlay_objects=['sink', 'dummy_sink_target_plane_large'],
+            # rgb_always_overlay_objects=[],
             **kwargs,
         )
 
@@ -565,8 +578,8 @@ class PutEggplantInSinkScene(PutOnBridgeInSceneEnv):
         self.agent.robot.set_pose(sapien.Pose([-10, 0, 0]))
 
         self.sink.set_pose(sapien.Pose(
-            [-0.16, 0.13, 0.88],
-            [1, 0, 0, 0]
+            [-0.16, 0.15, 0.88],
+            [1, 0, 0, SINK_SCENE_ANGLE_OFFSET]
         ))
         self.sink.lock_motion()
 
